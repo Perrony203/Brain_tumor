@@ -221,7 +221,7 @@ def find_meningioma_by_contour_size(image_path, diameter_cm=10, tolerance_factor
         print("No contours within the specified size range.")
         return
 
-    # Find contour closest to reference area
+
     best_contour, _ = min(valid_contours, key=lambda x: abs(x[1] - reference_area))
 
     # encontrar el centroide del contorno más grande
@@ -245,7 +245,7 @@ def find_meningioma_by_contour_size(image_path, diameter_cm=10, tolerance_factor
     plt.show()
 
 
-def find_meningioma_rect_crop(image_path, diameter_cm, tolerance_factor=1, width_ratio=0.5, height_ratio=0.7, max_attempts=5, tolerance_increment=0.5):
+def find_meningioma_rect_crop(image_path, diameter_cm, tolerance_factor=1, width_ratio=0.5, height_ratio=0.7, max_attempts=5, tolerance_increment=1):
     # Cargar y procesar imagen
     image = img_as_float(io.imread(image_path))
 
@@ -293,6 +293,9 @@ def find_meningioma_rect_crop(image_path, diameter_cm, tolerance_factor=1, width
 
         # Binarización
         binary = processed > filters.threshold_otsu(processed)
+
+        # Sobel
+        binary = filters.sobel(binary)
 
         # Encontrar contornos
         contours = measure.find_contours(binary, level=0.5)
@@ -346,7 +349,7 @@ def find_meningioma_rect_crop(image_path, diameter_cm, tolerance_factor=1, width
     ax[2].set_title('Procesada')
     ax[2].axis('off')
     ax[3].imshow(binary, cmap='gray')
-    ax[3].set_title('Binarizada')
+    ax[3].set_title('Contornos')
     ax[3].axis('off')
     ax[4].imshow(merge, cmap='gray')
     ax[4].set_title(f'Resultado Final (Objetivo: {reference_area:.0f} px²)')
