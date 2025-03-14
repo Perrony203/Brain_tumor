@@ -12,7 +12,7 @@ tf.display_sobel_edges('brain-tumor-mri-dataset/Testing/meningioma/Te-me_0010.jp
 
 
 
-tf.find_meningioma_rect_crop('brain-tumor-mri-dataset/Testing/meningioma/Te-me_0010.jpg',9)
+tf.find_meningioma_rect_crop('brain-tumor-mri-dataset/Testing/meningioma/Te-me_0246.jpg',2.779)
 
 
 #tf.region_growing('brain-tumor-mri-dataset/Testing/meningioma/Te-me_0015.jpg', seedpoint, threshold=0.1)
