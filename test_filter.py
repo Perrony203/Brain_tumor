@@ -172,7 +172,7 @@ def findMeningiomaByContours(image_path):
     plt.show()
 
 
-def find_meningioma_by_contour_size(image_path, diameter_cm=10, tolerance_factor=1):
+def find_meningioma_by_contour_size(image_path, diameter_cm, tolerance_factor=1):
     # cargar la imagen
     image = img_as_float(io.imread(image_path))
 
@@ -355,3 +355,117 @@ def find_meningioma_rect_crop(image_path, diameter_cm, tolerance_factor=1, width
     ax[4].set_title(f'Resultado Final (Objetivo: {reference_area:.0f} px²)')
     ax[4].axis('off')
     plt.show()
+
+def find_meningioma_rect_crop2(image_path, diameter_cm, tolerance_factor=1, width_ratio=0.5, height_ratio=0.7,
+                                  max_attempts=5, tolerance_increment=1):
+        # Cargar y procesar imagen
+        image = img_as_float(io.imread(image_path))
+
+        if (len(image.shape) == 3 and image.shape[-1] == 3):
+            gray_image = color.rgb2gray(image)
+        else:
+            gray_image = image
+
+        # Calcular dimensiones del recorte rectangular
+        height, width = gray_image.shape
+        crop_width = int(width * width_ratio)
+        crop_height = int(height * height_ratio)
+
+        # Calcular coordenadas del recorte
+        start_y = (height - crop_height) // 2
+        start_x = (width - crop_width) // 2
+
+
+        # Calcular área de referencia
+        pixels_per_cm = 10.67
+        radius_pixels = (diameter_cm * pixels_per_cm) / 2
+        reference_area = np.pi * (radius_pixels ** 2)
+
+        def try_find_contours(current_tolerance, attempt=1):
+            if attempt > max_attempts:
+                print(f"No se encontraron contornos después de {max_attempts} intentos.")
+                return None
+
+            # Definir rango de área con tolerancia actual
+            min_area = reference_area * (1 - current_tolerance)
+            max_area = reference_area * (1 + current_tolerance)
+
+            # Procesar imagen
+            threshold = np.max(gray_image) * 0.4
+            processed = gray_image.copy()
+            processed[processed <= threshold] = 0
+            threshold = np.mean(processed)
+            processed[processed <= threshold] = 0
+
+            # Operaciones morfológicas
+            processed = erosion(processed, rectangle(10, 10))
+            processed = dilation(processed, disk(5))
+
+            # Binarización
+            binary = processed > filters.threshold_otsu(processed)
+
+            # Sobel
+            binaryOriginal = filters.sobel(binary)
+
+            # Recortar imagen
+            binary = binaryOriginal[start_y:start_y + crop_height, start_x:start_x + crop_width]
+
+            # Encontrar contornos
+            contours = measure.find_contours(binary, level=0.5)
+
+            if not contours:
+                print(f"Intento {attempt}: No se encontraron contornos. Aumentando tolerancia...")
+                return try_find_contours(current_tolerance + tolerance_increment, attempt + 1)
+
+            # Filtrar contornos por área
+            valid_contours = []
+            for contour in contours:
+                area = calculate_polygon_area(contour)
+                if min_area <= area <= max_area:
+                    valid_contours.append((contour, area))
+
+            if not valid_contours:
+                print(f"Intento {attempt}: No hay contornos válidos. Aumentando tolerancia...")
+                return try_find_contours(current_tolerance + tolerance_increment, attempt + 1)
+
+            # Encontrar el mejor contorno
+            best_contour, _ = min(valid_contours, key=lambda x: abs(x[1] - reference_area))
+            return best_contour, binaryOriginal, processed
+
+        # Intentar encontrar contornos con recursividad
+        result = try_find_contours(tolerance_factor)
+        if result is None:
+            return
+
+        best_contour, binaryOriginal, processed = result
+
+        # Aplicar relleno por inundación
+        centroid = np.mean(best_contour, axis=0)
+        seed_point = tuple((map(int, centroid)))
+        seed_point = tuple(map(sum, zip(seed_point, (start_y,start_x))))
+        mask = flood(binaryOriginal, seed_point, tolerance=0.1)
+
+        # Crear máscara de tamaño completo
+        full_mask = np.zeros_like(gray_image)
+        full_mask[start_y, start_x:start_x] = mask
+
+        merge = gray_image + mask
+
+        # Mostrar resultados
+        fig, ax = plt.subplots(1, 5, figsize=(25, 5))
+        ax[0].imshow(image, cmap='gray')
+        ax[0].set_title('Original')
+        ax[0].axis('off')
+        ax[1].imshow(gray_image, cmap='gray')
+        ax[1].set_title('Recortada')
+        ax[1].axis('off')
+        ax[2].imshow(processed, cmap='gray')
+        ax[2].set_title('Procesada')
+        ax[2].axis('off')
+        ax[3].imshow(binaryOriginal, cmap='gray')
+        ax[3].set_title('Contornos')
+        ax[3].axis('off')
+        ax[4].imshow(merge, cmap='gray')
+        ax[4].set_title(f'Resultado Final (Objetivo: {reference_area:.0f} px²)')
+        ax[4].axis('off')
+        plt.show()
