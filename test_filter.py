@@ -138,7 +138,7 @@ def sobelpluswhite(image_path):
     binary_image = gray_image < filters.threshold_otsu(gray_image)
 
     # Sobel
-    sobel_image = filters.sobel(binary_image)
+    sobel_image = filters.roberts(binary_image)
 
     # Encontrar contornos
     contours = measure.find_contours(sobel_image, level=0.5)
@@ -160,11 +160,25 @@ def sobelpluswhite(image_path):
     merge= gray_image + mask
 
     # Resultado
-    fig, ax = plt.subplots(1, 2, figsize=(12, 6))
-    ax[0].imshow(image)
-    ax[0].set_title('Original Image')
-    ax[0].axis('off')
-    ax[1].imshow(merge, cmap='gray')
-    ax[1].set_title('Result')
-    ax[1].axis('off')
+    fig, ax = plt.subplots(3, 2, figsize=(12, 6))
+    ax[0][0].imshow(image)
+    ax[0][0].set_title('Original Image')
+    ax[0][0].axis('off')
+    ax[0][1].imshow(sobel_image, cmap='gray')
+    ax[0][1].set_title('Sobel')
+    ax[0][1].axis('off')
+    ax[1][0].imshow(image)
+    ax[1][0].set_title('Contours found')
+    ax[1][0].axis('off')
+    ax[1][1].imshow(mask, cmap='gray')
+    ax[1][1].set_title('Tumor')
+    ax[1][1].axis('off')
+    ax[2][0].imshow(merge, cmap='gray')
+    ax[2][0].set_title('Result')
+    ax[2][0].axis('off')
+    ax[2][1].axis('off')
+    
+    for contour in contours:
+        ax[1][0].plot(contour[:, 1], contour[:, 0], linewidth=1)
+   
     plt.show()
