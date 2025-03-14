@@ -6,8 +6,6 @@ import cv2
 image_path = 'D:\\Universidad\\2025-1\\Computación gráfica\\Talleres\\Taller 1\\Imagenes\\OBJECTS.png'
 image = io.imread(image_path, as_gray = True)
 image = img_as_ubyte(image)
-plt.imshow(image, cmap='gray')
-plt.show()
 
 def og_color(og_image, segmented_image):
   new_image = segmented_image
